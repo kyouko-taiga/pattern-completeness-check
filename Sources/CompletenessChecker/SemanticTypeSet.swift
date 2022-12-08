@@ -41,11 +41,21 @@ public struct SemanticTypeSet: Hashable {
     return result
   }
 
+  /// Removes the elements that are not also in `other`.
+  public mutating func formIntersection(_ other: Self) {
+    elements.formIntersection(other.elements)
+  }
+
   /// Returns a new set containing the elements in `self` that do not occur in `other`.
   public func subtracting(_ other: Self) -> Self {
     var result = self
     result.elements.subtract(other.elements)
     return result
+  }
+
+  /// Removes the elements that are in `other`.
+  public mutating func subtract(_ other: Self) {
+    elements.subtract(other.elements)
   }
 
   /// Inserts `newElement` in `self`.

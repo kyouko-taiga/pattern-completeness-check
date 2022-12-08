@@ -21,7 +21,11 @@ public struct SemanticSignature: Hashable {
 
   /// Returns a collection with the interfaces of the implementations that handle the sequences
   /// arguments that match `self` but are not handled by any of the given interfaces.
+  ///
+  /// - Requires: All implementations must have the same number of parameters as `self`.
   public func isSatisfied(by implementations: [SemanticSignature]) -> Set<SemanticSignature> {
+    precondition(implementations.allSatisfy({ (i) in i.parameters.count == parameters.count }))
+
     /// The set of signatures that have to be satisfied.
     var interfaces: Set<SemanticSignature> = [self]
     /// The set of signatures that are not satisfied.
@@ -55,31 +59,38 @@ public struct SemanticSignature: Hashable {
       var newSuccessors: Set<SemanticSignature> = []
       var isComplete = false
 
-      // Loop over the implementations that overlap with `s`.
-      for i in implementations where i.overlaps(with: s) {
-        // Compute the strict complement of `s` under `i`.
-        let strictComplement = s - i
-
-        // If all the parameters of the strict complement are uninhabited, conclude that the given
-        // implementations satisfy `t` as the complement set of `s` under `i` is empty.
-        if !strictComplement.isPartiallyInhabited {
+      // Loop over the implementations.
+      for i in implementations {
+        // Check if `i` trivially satisfies `s`.
+        if s == i {
           isComplete = true
           break
         }
 
-        // Compute the complement set of `s` under `i`, containing the strict complement as well as
-        // the signatures of all possible partial matches of `i`, excluding uninhabited elements.
+        // Skip `i` if its intersection with `s` is uninhabited.
+        let si = s.intersection(i)
+        if !si.isInhabited { continue }
+
+        // Compute the strict complement of `s` under `i`.
+        let strictComplement = s.subtracting(i)
+
+        // Filter the indices of the inhabited parameters.
+        let indices = strictComplement.parameters.indices.filter({ (k) in
+          !strictComplement.parameters[k].isEmpty
+        })
+
+        // Compute the complement set of `s` under `i`, that is the set of signatures covered by
+        // `s` and not `i`.
         var completementSet: [SemanticSignature] = []
-        for indices in (0 ..< i.parameters.count).powerset.dropLast() {
-          var t = strictComplement
-          for k in indices {
-            t.parameters[k] = s.parameters[k].intersection(i.parameters[k])
+        for variant in indices.powerset where !variant.isEmpty {
+          var t = si
+          for k in variant {
+            t.parameters[k] = strictComplement.parameters[k]
           }
 
           // Only add new inhabited signatures to the complement set.
-          if t.isInhabited && !interfaces.contains(t) {
-            completementSet.append(t)
-          }
+          assert(t.isInhabited)
+          if !interfaces.contains(t) { completementSet.append(t) }
         }
 
         // If the complement set is empty, conclude that the given implementations satisfy `t`.
@@ -109,22 +120,27 @@ public struct SemanticSignature: Hashable {
     return (successors, leaves)
   }
 
-  /// Returns whether there exists a sequence of arguments that matches both `self` and `other`.
-  public func overlaps(with other: Self) -> Bool {
-    if parameters.count != other.parameters.count { return false }
-    for i in 0 ..< parameters.count {
-      if !parameters[i].intersects(with: other.parameters[i]) { return false }
+  /// Returns the signature matching the sequence of arguments matched by both `self` and `other`.
+  ///
+  /// - Requires: `other` must the same number of parameters as `self`.
+  public func intersection(_ other: Self) -> Self {
+    var result = self
+    for i in 0 ..< result.parameters.count {
+      result.parameters[i].formIntersection(other.parameters[i])
     }
-    return true
+    return result
   }
 
-  /// Returns the signature matching the sequences of arguments that are fully rejected by `self`.
+  /// Returns the signature matching the sequences of arguments that matched by `self` and fully
+  /// rejected by `other`.
   ///
-  /// - Requires: `lhs` must overlap with `rhs`.
-  public static func - (lhs: Self, rhs: Self) -> SemanticSignature {
-    assert(lhs.overlaps(with: rhs))
-    return SemanticSignature(
-      parameters: zip(lhs.parameters, rhs.parameters).map({ (l, r) in l.subtracting(r) }))
+  /// - Requires: `other` must the same number of parameters as `self`.
+  public func subtracting(_ other: Self) -> Self {
+    var result = self
+    for i in 0 ..< result.parameters.count {
+      result.parameters[i].subtract(other.parameters[i])
+    }
+    return result
   }
 
 }
