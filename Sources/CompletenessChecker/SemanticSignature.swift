@@ -22,14 +22,16 @@ public struct SemanticSignature: Hashable {
   /// Returns a collection with the interfaces of the implementations that handle the sequences
   /// arguments that match `self` but are not handled by any of the given interfaces.
   public func isSatisfied(by implementations: [SemanticSignature]) -> Set<SemanticSignature> {
-    var states: Set<SemanticSignature> = [self]
+    /// The set of signatures that have to be satisfied.
+    var interfaces: Set<SemanticSignature> = [self]
+    /// The set of signatures that are not satisfied.
     var leaves: Set<SemanticSignature> = []
 
-    var successors = states
-    while !successors.isEmpty {
-      if let (s, l) = step(interfaces: successors, implementations: implementations) {
-        successors = s.subtracting(states)
-        states.formUnion(s)
+    while !interfaces.isEmpty {
+      if let (s, l) = step(interfaces: interfaces, implementations: implementations) {
+        // Note: A step should only produce strictly smaller successors.
+        assert(s.isDisjoint(with: interfaces))
+        interfaces = s
         leaves.formUnion(l)
       } else {
         break
