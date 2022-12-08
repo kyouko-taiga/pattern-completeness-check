@@ -3,9 +3,18 @@ import PackageDescription
 
 let package = Package(
   name: "PatternCompleteness",
+  products: [
+    .executable(name: "patchk", targets: ["CLI"]),
+  ],
   dependencies: [],
   targets: [
+    .target(name: "CompletenessChecker"),
+
     .executableTarget(
-      name: "PatternCompleteness",
-      dependencies: []),
+      name: "CLI",
+      dependencies: ["CompletenessChecker"]),
+
+    .testTarget(
+      name: "CompletenessCheckerTests",
+      dependencies: ["CompletenessChecker"]),
   ])
