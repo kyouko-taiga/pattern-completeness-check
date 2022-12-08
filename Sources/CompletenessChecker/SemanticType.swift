@@ -9,7 +9,20 @@ public enum SemanticType: Hashable {
 
 }
 
-extension SemanticType: CustomStringConvertible {
+extension SemanticType: ExpressibleByStringLiteral {
+
+  public init(stringLiteral expression: String) {
+    self.init(expression)!
+  }
+
+}
+
+extension SemanticType: LosslessStringConvertible {
+
+  public init?(_ expression: String) {
+    // TODO: Parse the expression.
+    self = .tag(name: expression, arguments: [])
+  }
 
   public var description: String {
     switch self {
