@@ -2,7 +2,7 @@
 struct SemanticSignature: Hashable {
 
   /// The set of types at each corresponding parameter position.
-  var parameters: [Set<SemanticType>]
+  var parameters: [SemanticTypeSet]
 
   /// Indicates whether there exists a sequence of arguments that matches `self`.
   var isInhabited: Bool {
