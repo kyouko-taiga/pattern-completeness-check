@@ -11,6 +11,11 @@ public struct SemanticSignature: Hashable {
 
   /// Indicates whether there exists a sequence of arguments that matches `self`.
   public var isInhabited: Bool {
+    parameters.allSatisfy({ (p) in !p.isEmpty })
+  }
+
+  /// Indicates whether there exists a sequence of arguments that partially matches `self`.
+  public var isPartiallyInhabited: Bool {
     parameters.contains(where: { (p) in !p.isEmpty })
   }
 
@@ -20,10 +25,12 @@ public struct SemanticSignature: Hashable {
     var states: Set<SemanticSignature> = [self]
     var leaves: Set<SemanticSignature> = []
 
-    while !states.isEmpty {
-      if let (successors, newLeaves) = step(states: states, implementations: implementations) {
-        states = successors
-        leaves.formUnion(newLeaves)
+    var successors = states
+    while !successors.isEmpty {
+      if let (s, l) = step(interfaces: successors, implementations: implementations) {
+        successors = s.subtracting(states)
+        states.formUnion(s)
+        leaves.formUnion(l)
       } else {
         break
       }
@@ -34,30 +41,50 @@ public struct SemanticSignature: Hashable {
 
   /// Executes one step of the completion algorithm.
   private func step(
-    states: Set<SemanticSignature>,
+    interfaces: Set<SemanticSignature>,
     implementations: [SemanticSignature]
   ) -> (successors: Set<SemanticSignature>, leaves: Set<SemanticSignature>)? {
     var successors: Set<SemanticSignature> = []
     var leaves: Set<SemanticSignature> = []
 
-    // For all signature `s` in the state space and all implementations `i` that overlap with `s`,
-    // add the complement signature `t = s - i` to the state space unless it is uninhabited.
-    for s in states {
+    // For all interface signatures `s` and all implementations `i` that overlap with `s`, compute
+    // the complement signature set of `s` under `i`.
+    for s in interfaces {
       var newSuccessors: Set<SemanticSignature> = []
       var isComplete = false
 
       // Loop over the implementations that overlap with `s`.
       for i in implementations where i.overlaps(with: s) {
-        // Compute the complement signature `t`.
-        let t = s - i
+        // Compute the strict complement of `s` under `i`.
+        let strictComplement = s - i
 
-        // The given implementations satisfy `s` if `t` is unihnabited. Otherwise, `t` represent the
-        // signatures left to satisfy.
-        if !t.isInhabited {
+        // If all the parameters of the strict complement are uninhabited, conclude that the given
+        // implementations satisfy `t` as the complement set of `s` under `i` is empty.
+        if !strictComplement.isPartiallyInhabited {
+          isComplete = true
+          break
+        }
+
+        // Compute the complement set of `s` under `i`, containing the strict complement as well as
+        // the signatures of all possible partial matches of `i`, excluding uninhabited elements.
+        var completementSet: [SemanticSignature] = []
+        for indices in (0 ..< i.parameters.count).powerset.dropLast() {
+          var t = strictComplement
+          for k in indices {
+            t.parameters[k] = i.parameters[k]
+          }
+
+          // Only add inhabited signatures to the complement set.
+          if t.isInhabited { completementSet.append(t) }
+        }
+
+        // If the complement set is empty, conclude that the given implementations satisfy `t`.
+        // Otherwise, add its contents to the set of successors.
+        if completementSet.isEmpty {
           isComplete = true
           break
         } else {
-          newSuccessors.insert(t)
+          newSuccessors.formUnion(completementSet)
         }
       }
 
@@ -87,26 +114,13 @@ public struct SemanticSignature: Hashable {
     return true
   }
 
-  /// Returns a semantic signature matching all the sequences of arguments that are accepted by
-  /// `lhs` and are not accepted by `rhs`.
+  /// Returns the signature matching the sequences of arguments that are fully rejected by `self`.
   ///
   /// - Requires: `lhs` must overlap with `rhs`.
   public static func - (lhs: Self, rhs: Self) -> SemanticSignature {
     assert(lhs.overlaps(with: rhs))
-
-    // Compute set of types only accepted by `lhs` at each parameter position.
-    var result = SemanticSignature(
+    return SemanticSignature(
       parameters: zip(lhs.parameters, rhs.parameters).map({ (l, r) in l.subtracting(r) }))
-
-    // If the resulting signature is inhabited, substitute empty sets by their original value in
-    // `lhs`. Those correspond to the fully matched position.
-    if result.isInhabited {
-      for i in 0 ..< lhs.parameters.count where result.parameters[i].isEmpty {
-        result.parameters[i] = lhs.parameters[i]
-      }
-    }
-
-    return result
   }
 
 }
@@ -115,6 +129,14 @@ extension SemanticSignature: CustomStringConvertible {
 
   public var description: String {
     "(\(list: parameters))"
+  }
+
+}
+
+extension SemanticSignature: CustomReflectable {
+
+  public var customMirror: Mirror {
+    Mirror(self, unlabeledChildren: parameters)
   }
 
 }

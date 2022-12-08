@@ -85,3 +85,11 @@ extension SemanticTypeSet: CustomStringConvertible {
   public var description: String { String(describing: elements) }
 
 }
+
+extension SemanticTypeSet: CustomReflectable {
+
+  public var customMirror: Mirror {
+    Mirror(reflecting: elements)
+  }
+
+}
