@@ -34,7 +34,14 @@ public struct SemanticTypeSet: Hashable {
     other.contains(where: contains(_:))
   }
 
-  /// Returns a new set containing the elements of this set that do not occur in the given set.
+  /// Returns a new set containing the elements that are common to both `self` and `other`.
+  public func intersection(_ other: Self) -> Self {
+    var result = self
+    result.elements.formIntersection(other.elements)
+    return result
+  }
+
+  /// Returns a new set containing the elements in `self` that do not occur in `other`.
   public func subtracting(_ other: Self) -> Self {
     var result = self
     result.elements.subtract(other.elements)

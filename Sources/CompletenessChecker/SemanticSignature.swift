@@ -71,7 +71,7 @@ public struct SemanticSignature: Hashable {
         for indices in (0 ..< i.parameters.count).powerset.dropLast() {
           var t = strictComplement
           for k in indices {
-            t.parameters[k] = i.parameters[k]
+            t.parameters[k] = s.parameters[k].intersection(i.parameters[k])
           }
 
           // Only add inhabited signatures to the complement set.
