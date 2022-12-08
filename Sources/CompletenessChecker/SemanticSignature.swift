@@ -76,8 +76,10 @@ public struct SemanticSignature: Hashable {
             t.parameters[k] = s.parameters[k].intersection(i.parameters[k])
           }
 
-          // Only add inhabited signatures to the complement set.
-          if t.isInhabited { completementSet.append(t) }
+          // Only add new inhabited signatures to the complement set.
+          if t.isInhabited && !interfaces.contains(t) {
+            completementSet.append(t)
+          }
         }
 
         // If the complement set is empty, conclude that the given implementations satisfy `t`.
