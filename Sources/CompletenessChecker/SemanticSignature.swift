@@ -14,11 +14,6 @@ public struct SemanticSignature: Hashable {
     parameters.allSatisfy({ (p) in !p.isEmpty })
   }
 
-  /// Indicates whether there exists a sequence of arguments that partially matches `self`.
-  public var isPartiallyInhabited: Bool {
-    parameters.contains(where: { (p) in !p.isEmpty })
-  }
-
   /// Returns a collection with the interfaces of the implementations that handle the sequences
   /// arguments that match `self` but are not handled by any of the given interfaces.
   ///
