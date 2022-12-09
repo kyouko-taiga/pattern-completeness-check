@@ -60,11 +60,7 @@ public struct SemanticTypeSet: Hashable {
 
   /// Inserts `newElement` in `self`.
   public mutating func insert(_ newElement: SemanticType) {
-    if case .union(let types) = newElement {
-      for e in types { insert(e) }
-    } else {
-      elements.insert(newElement)
-    }
+    elements.insert(newElement)
   }
 
 }
