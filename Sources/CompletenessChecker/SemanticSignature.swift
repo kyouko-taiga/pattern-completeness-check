@@ -1,12 +1,21 @@
 /// The semantic signature expressed by the declaration of an interface or implementation.
 public struct SemanticSignature: Hashable {
 
+  /// The number of type variables introduced by the signature.
+  public var variableCount: Int
+
   /// The set of types at each corresponding parameter position.
   public var parameters: [SemanticTypeSet]
 
   /// Creates an instance with the given properties.
-  public init(parameters: [SemanticTypeSet]) {
+  public init(variableCount: Int = 0, parameters: [SemanticTypeSet]) {
+    self.variableCount = variableCount
     self.parameters = parameters
+  }
+
+  /// The number of parameters in `self`.
+  public var arity: Int {
+    parameters.count
   }
 
   /// Indicates whether there exists a sequence of arguments that matches `self`.
@@ -17,9 +26,9 @@ public struct SemanticSignature: Hashable {
   /// Returns a collection with the interfaces of the implementations that handle the sequences
   /// arguments that match `self` but are not handled by any of the given interfaces.
   ///
-  /// - Requires: All implementations must have the same number of parameters as `self`.
+  /// - Requires: All implementations must have the same arity as `self`.
   public func isSatisfied(by implementations: [SemanticSignature]) -> Set<SemanticSignature> {
-    precondition(implementations.allSatisfy({ (i) in i.parameters.count == parameters.count }))
+    precondition(implementations.allSatisfy({ (i) in i.arity == arity }))
 
     /// The set of signatures that have to be satisfied.
     var interfaces: Set<SemanticSignature> = [self]
@@ -117,10 +126,10 @@ public struct SemanticSignature: Hashable {
 
   /// Returns the signature matching the sequence of arguments matched by both `self` and `other`.
   ///
-  /// - Requires: `other` must the same number of parameters as `self`.
+  /// - Requires: `other` must the same arity as `self`.
   public func intersection(_ other: Self) -> Self {
     var result = self
-    for i in 0 ..< result.parameters.count {
+    for i in 0 ..< result.arity {
       result.parameters[i].formIntersection(other.parameters[i])
     }
     return result
@@ -129,10 +138,10 @@ public struct SemanticSignature: Hashable {
   /// Returns the signature matching the sequences of arguments that matched by `self` and fully
   /// rejected by `other`.
   ///
-  /// - Requires: `other` must the same number of parameters as `self`.
+  /// - Requires: `other` must the same arity as `self`.
   public func subtracting(_ other: Self) -> Self {
     var result = self
-    for i in 0 ..< result.parameters.count {
+    for i in 0 ..< result.arity {
       result.parameters[i].subtract(other.parameters[i])
     }
     return result

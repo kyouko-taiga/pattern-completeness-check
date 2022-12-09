@@ -4,6 +4,10 @@ public enum SemanticType: Hashable {
   /// A type tag with its arguments, if any (e.g., `A<B, C>`).
   case tag(name: String, arguments: [SemanticType])
 
+  /// A type variable.
+  ///
+  /// Type variables are identified by their index in the signature that introduces them.
+  case variable(index: Int)
 
 }
 
@@ -22,6 +26,8 @@ extension SemanticType: CustomStringConvertible {
     case .tag(let name, let arguments):
       return arguments.isEmpty ? name : "\(name)<\(list: arguments)>"
 
+    case .variable(let index):
+      return String(describing: index)
     }
   }
 
